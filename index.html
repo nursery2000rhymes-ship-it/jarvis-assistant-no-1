@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#030914"><meta name="description" content="Unofficial JARVIS-inspired personal assistant with voice and Android shortcuts">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg"><link rel="stylesheet" href="style.css">
+<title>J.A.R.V.I.S.</title>
+</head>
+<body>
+<div class="scanlines"></div>
+<main class="shell">
+<header class="top"><div><div class="eyebrow">STARK INDUSTRIES // PERSONAL ASSISTANT</div><h1>J.A.R.V.I.S.</h1></div><div class="live"><i></i><span id="status">SYSTEM ONLINE</span></div></header>
+<div class="hud">
+<div class="side left"><span>VOICE LINK</span><b id="voiceState">READY</b><span>CORE TEMP</span><b>NORMAL</b><span>NETWORK</span><b id="network">CHECKING</b></div>
+<section class="reactor">
+<div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="ticks"></div>
+<button id="core" class="core" aria-label="Activate JARVIS"><span class="corelight"></span><span class="arc">J</span></button>
+<div class="core-caption">NEURAL INTERFACE</div>
+</section>
+<div class="side right"><span>LOCAL TIME</span><b id="clock">--:--</b><span>POWER</span><b>100%</b><span>MODE</span><b>PERSONAL</b></div>
+</div>
+<div class="subline"><span>◈</span> <span id="hint">TAP THE ARC REACTOR TO SPEAK</span> <span>◈</span></div>
+<section class="console"><div class="console-head"><span>COMMUNICATION LOG</span><span>SECURE CHANNEL</span></div>
+<div id="log" class="log" aria-live="polite"><div class="entry jarvis"><b>JARVIS</b><p>Good evening. All systems are standing by. How may I assist you?</p></div></div></section>
+<form id="chatForm" class="composer"><input id="prompt" autocomplete="off" placeholder="Speak or type a command..." aria-label="Message JARVIS"><button type="submit">SEND</button></form>
+<div class="actions"><button id="chatgpt" class="secondary">OPEN CHATGPT</button><button id="clear" class="secondary">CLEAR LOG</button></div>
+<footer>JARVIS PERSONAL INTERFACE <span>•</span> UNOFFICIAL FAN-MADE PROJECT</footer>
+</main><script src="app.js"></script>
+</body></html>
