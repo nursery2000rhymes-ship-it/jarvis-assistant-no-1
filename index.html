@@ -23,6 +23,8 @@
 <section class="console"><div class="console-head"><span>COMMUNICATION LOG</span><span>SECURE CHANNEL</span></div>
 <div id="log" class="log" aria-live="polite"><div class="entry jarvis"><b>JARVIS</b><p>Good evening. All systems are standing by. How may I assist you?</p></div></div></section>
 <form id="chatForm" class="composer"><input id="prompt" autocomplete="off" placeholder="Speak or type a command..." aria-label="Message JARVIS"><button type="submit">SEND</button></form>
+<div class="actions"><button id="voiceMode" class="secondary">START LIVE VOICE</button><button id="language" class="secondary">LANG: EN-IN</button></div>
+<div class="settings"><label for="workerUrl">SECURE AI CONNECTION</label><div class="settings-row"><input id="workerUrl" type="url" placeholder="Paste your Cloudflare Worker URL" autocomplete="url"><button id="saveWorker" type="button">SAVE</button></div><small id="connectionNote">Add your private Worker URL here. Never paste your Groq key into this app.</small></div>
 <div class="actions"><button id="chatgpt" class="secondary">OPEN CHATGPT</button><button id="clear" class="secondary">CLEAR LOG</button></div>
 <footer>JARVIS PERSONAL INTERFACE <span>•</span> UNOFFICIAL FAN-MADE PROJECT</footer>
 </main><script src="app.js"></script>

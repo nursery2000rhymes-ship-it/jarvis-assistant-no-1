@@ -13,6 +13,10 @@
   let voices = [];
   let recognition = null;
   let listening = false;
+  let liveVoice = false;
+  let busy = false;
+  let workerUrl = localStorage.getItem('jarvis-worker-url') || '';
+  $('workerUrl').value = workerUrl;
 
   const setHint = message => { if (hint) hint.textContent = message; };
   const add = (who, message) => {
@@ -61,8 +65,8 @@
     utterance.pitch = 0.88;
     utterance.volume = 1;
     utterance.onstart = () => setHint('JARVIS SPEAKING // VOICE LINK ACTIVE');
-    utterance.onend = () => setHint('◈ TAP THE ARC REACTOR TO SPEAK ◈');
-    utterance.onerror = () => setHint('VOICE ERROR // CHECK GOOGLE TEXT-TO-SPEECH SETTINGS');
+    utterance.onend = () => { setHint(liveVoice ? 'LIVE VOICE // LISTENING FOR YOU' : '◈ TAP THE ARC REACTOR TO SPEAK ◈'); if (liveVoice) restartListening(650); };
+    utterance.onerror = () => { setHint('VOICE ERROR // CHECK GOOGLE TEXT-TO-SPEECH SETTINGS'); if (liveVoice) restartListening(900); };
     window.speechSynthesis.speak(utterance);
   }
 
@@ -171,9 +175,27 @@
     return false;
   }
 
-  function respond(message) {
+  async function respond(message) {
     if (localCommand(message)) return;
-    reply('I have received your message. My local assistant can handle supported commands, but the ChatGPT brain is not connected yet. OPEN CHATGPT opens ChatGPT separately. To answer general questions inside this interface, a secure server connection and separately billed API access are required.');
+    if (!workerUrl) {
+      reply('My AI connection is not configured yet. Add your secure Cloudflare Worker URL in the connection box below. Your Groq key must stay stored as a Worker secret.');
+      return;
+    }
+    if (busy) { reply('One moment please. I am finishing the previous request.'); return; }
+    busy = true; status.textContent = 'THINKING'; setHint('CONNECTING TO JARVIS AI CORE...');
+    try {
+      const response = await fetch(workerUrl.replace(/\/$/, '') + '/chat', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({message, language: speechLanguage})
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `AI server error (${response.status})`);
+      const answer = String(data.reply || '').trim();
+      if (!answer) throw new Error('The AI returned an empty response.');
+      reply(answer);
+    } catch (error) {
+      reply('I could not reach my AI core. Please check the internet connection and Worker URL. Details: ' + (error.message || 'connection failed'));
+    } finally { busy = false; status.textContent = liveVoice ? 'VOICE ACTIVE' : 'SYSTEM ONLINE'; }
   }
 
   function submit(message) {
@@ -188,6 +210,8 @@
     event.preventDefault();
     submit($('prompt').value);
   });
+  $('saveWorker').addEventListener('click', () => { const value = $('workerUrl').value.trim().replace(/\/$/, ''); if (!/^https:\/\//i.test(value)) { $('connectionNote').textContent = 'Please enter the HTTPS Worker URL from your Cloudflare dashboard.'; return; } workerUrl = value; localStorage.setItem('jarvis-worker-url', workerUrl); $('connectionNote').textContent = 'Secure AI endpoint saved on this device. Your API key remains on the Worker.'; reply('Secure AI connection address saved.'); });
+  $('language').addEventListener('click', () => { const next = speechLanguage === 'en-IN' ? 'hi-IN' : 'en-IN'; setLanguage(next); $('language').textContent = 'LANG: ' + next.toUpperCase(); reply(next === 'hi-IN' ? 'हिंदी भाषा सक्रिय है।' : 'Indian English mode is active.'); });
   $('chatgpt').addEventListener('click', () => {
     window.open('https://chatgpt.com/', '_blank', 'noopener');
   });
@@ -211,7 +235,7 @@
     recognition = new SpeechRecognition();
     recognition.lang = speechLanguage;
     recognition.interimResults = false;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.onstart = () => {
       listening = true;
       status.textContent = 'VOICE ACTIVE';
@@ -222,14 +246,14 @@
       listening = false;
       status.textContent = 'SYSTEM ONLINE';
       voiceState.textContent = 'READY';
-      if (!window.speechSynthesis?.speaking) setHint('◈ TAP THE ARC REACTOR TO SPEAK ◈');
+      if (liveVoice && !window.speechSynthesis?.speaking) restartListening(500); else if (!window.speechSynthesis?.speaking) setHint('◈ TAP THE ARC REACTOR TO SPEAK ◈');
     };
     recognition.onerror = event => {
-      setHint('VOICE INPUT ' + String(event.error || 'ERROR').toUpperCase() + ' // TYPE BELOW');
+      setHint('VOICE INPUT ' + String(event.error || 'ERROR').toUpperCase() + (liveVoice ? ' // RETRYING' : ' // TYPE BELOW')); if (liveVoice && event.error !== 'not-allowed') restartListening(1200);
     };
-    recognition.onresult = event => submit(event.results[0][0].transcript);
+    recognition.onresult = event => { const last = event.results[event.results.length - 1]; if (last && last.isFinal) { if (liveVoice) recognition.stop(); submit(last[0].transcript); } };
     $('core').addEventListener('click', () => {
-      if (listening) { recognition.stop(); return; }
+      if (listening) { liveVoice = false; recognition.stop(); return; }
       try {
         recognition.lang = speechLanguage;
         recognition.start();
@@ -237,7 +261,11 @@
         setHint('VOICE LISTENER BUSY // TAP AGAIN');
       }
     });
+    $('voiceMode').addEventListener('click', () => { liveVoice = !liveVoice; $('voiceMode').classList.toggle('active', liveVoice); $('voiceMode').textContent = liveVoice ? 'STOP LIVE VOICE' : 'START LIVE VOICE'; if (liveVoice) { setHint('LIVE VOICE STARTING // SPEAK AFTER THE TONE'); startListening(); } else { recognition.stop(); window.speechSynthesis?.cancel(); setHint('LIVE VOICE STOPPED'); } });
+    function startListening() { if (!liveVoice || listening || busy || window.speechSynthesis?.speaking) return; try { recognition.lang = speechLanguage; recognition.start(); } catch (_) {} }
+    function restartListening(delay) { window.setTimeout(startListening, delay); }
   } else {
+    $('voiceMode').disabled = true;
     $('core').addEventListener('click', () => setHint('VOICE INPUT NOT SUPPORTED IN THIS BROWSER // TYPE BELOW'));
   }
 
@@ -248,5 +276,7 @@
   }
 
   // Initial greeting is visible, but does not speak unexpectedly on page load.
+  $('language').textContent = 'LANG: ' + speechLanguage.toUpperCase();
+  if (workerUrl) $('connectionNote').textContent = 'Worker URL saved on this device.';
   setHint('◈ TAP THE ARC REACTOR TO SPEAK ◈');
 })();
